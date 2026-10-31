@@ -1,0 +1,10 @@
+{
+  "name": "xhs-content-radar",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local Xiaohongshu video research workspace",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  }
+}

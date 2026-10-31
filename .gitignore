@@ -1,0 +1,10 @@
+.env
+.env.*
+!.env.example
+node_modules/
+npm-debug.log*
+work/xhs-radar-data/
+.taste-skill/
+bin/xiaohongshu-mcp-before-*.exe
+.DS_Store
+Thumbs.db

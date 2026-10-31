@@ -1,0 +1,5 @@
+Platform icon artwork is bundled from Simple Icons SVGs distributed under CC0 1.0 Universal.
+Source: https://cdn.simpleicons.org/
+
+The Douyin selector uses the TikTok musical-note mark as its compact visual shorthand.
+CC0 does not grant trademark rights; all brand names and marks remain with their respective owners.

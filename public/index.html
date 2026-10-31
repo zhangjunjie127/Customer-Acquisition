@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <title>内容雷达</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script defer src="/vendor/lucide.js"></script>
+  <script defer src="/content-risk.js"></script>
+  <script defer src="/app.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"><i data-lucide="scan-search"></i></span>
+        <span class="brand-title">内容雷达</span>
+        <span class="brand-divider"></span>
+        <span class="platform-name">小红书</span>
+      </div>
+      <div class="top-actions">
+        <span id="connection-status" class="connection-status" role="status"><span class="status-dot"></span>连接中</span>
+        <button id="model-button" class="button button-quiet" type="button" title="模型设置" aria-label="模型设置"><i data-lucide="settings-2"></i><span>模型</span></button>
+        <button id="login-button" class="button button-quiet" type="button" aria-label="连接小红书账号"><i data-lucide="log-in"></i><span>连接账号</span></button>
+      </div>
+    </header>
+
+    <main>
+      <nav class="workspace-nav" aria-label="工作区">
+        <button id="view-discover" class="workspace-tab is-active" type="button" aria-current="page">发现</button>
+        <button id="view-ideas" class="workspace-tab" type="button">选题库</button>
+        <button id="view-reviews" class="workspace-tab" type="button">发布复盘</button>
+        <button id="view-check" class="workspace-tab" type="button">文案筛查</button>
+      </nav>
+      <section id="search-band" class="search-band" aria-label="搜索">
+        <div class="source-switch segmented" role="group" aria-label="研究来源">
+          <button id="mode-keyword" class="segment is-active" type="button" aria-pressed="true">关键词</button>
+          <button id="mode-profile" class="segment" type="button" aria-pressed="false">对标账号</button>
+        </div>
+        <form id="search-form" class="search-form">
+          <label id="keyword-field" class="keyword-field">
+            <i data-lucide="search" aria-hidden="true"></i>
+            <span class="sr-only">搜索关键词</span>
+            <input id="keyword" type="search" placeholder="输入关键词，例如：通勤穿搭" maxlength="80" autocomplete="off" required>
+          </label>
+          <label id="profile-field" class="keyword-field" hidden>
+            <i data-lucide="at-sign" aria-hidden="true"></i>
+            <span class="sr-only">对标账号名称</span>
+            <input id="profile-name" type="search" placeholder="输入对标账号名称" maxlength="80" autocomplete="off" required disabled>
+          </label>
+          <label class="filter-field search-filter">
+            <span>排序</span>
+            <select id="sort" aria-label="平台排序">
+              <option>最多点赞</option>
+              <option>最多评论</option>
+              <option>最多收藏</option>
+              <option>最新</option>
+              <option>综合</option>
+            </select>
+          </label>
+          <label class="filter-field search-filter">
+            <span>时间</span>
+            <select id="time" aria-label="发布时间">
+              <option>一周内</option>
+              <option>一天内</option>
+              <option>半年内</option>
+              <option>不限</option>
+            </select>
+          </label>
+          <button id="search-button" class="button button-primary" type="submit" aria-label="搜索视频"><i data-lucide="search"></i><span>搜索视频</span></button>
+        </form>
+      </section>
+
+      <section id="account-picker" class="account-picker" aria-label="候选账号" hidden>
+        <div class="account-picker-inner">
+          <div class="account-picker-head">
+            <strong id="account-picker-title">候选账号</strong>
+            <span>来自当前公开笔记搜索结果，可能无法覆盖全部账号。</span>
+          </div>
+          <div id="account-candidates" class="account-candidates"></div>
+        </div>
+      </section>
+
+      <div id="setup-notice" class="setup-notice" hidden>
+        <i data-lucide="circle-alert" aria-hidden="true"></i>
+        <span id="setup-message">连接尚未就绪</span>
+        <button id="retry-button" class="icon-button" type="button" title="重新检查连接" aria-label="重新检查连接"><i data-lucide="refresh-cw"></i></button>
+      </div>
+
+      <section id="workspace" class="workspace" aria-label="研究工作台">
+        <div class="results-pane">
+          <div class="pane-head results-head">
+            <div class="pane-title">
+              <h1 id="results-title">视频发现</h1>
+              <span id="result-count" class="count">0</span>
+            </div>
+            <div class="result-controls">
+              <button id="account-button" class="button button-primary" type="button" hidden><i data-lucide="scan-search"></i><span>分析账号</span></button>
+              <button id="refresh-results" class="button button-refresh" type="button" title="按上次成功的条件重新读取结果" disabled><i data-lucide="refresh-cw"></i><span>刷新结果</span></button>
+              <div class="segmented" role="group" aria-label="结果排序">
+                <button id="sort-platform" class="segment is-active" type="button" aria-pressed="true">平台顺序</button>
+                <button id="sort-heat" class="segment" type="button" aria-pressed="false">互动规模</button>
+              </div>
+              <button id="compare-button" class="button button-quiet" type="button" aria-pressed="false" title="首次搜索已保存记录；同条件再次搜索后可对比" disabled><i data-lucide="arrow-left-right"></i><span>对比上次</span></button>
+            </div>
+          </div>
+          <div id="search-status" class="search-status" role="status" aria-live="polite" hidden>
+            <span class="search-progress" aria-hidden="true"></span>
+            <span id="search-status-text"></span>
+          </div>
+          <div id="comparison-summary" class="comparison-summary" role="status" hidden></div>
+          <div id="results" class="results-list" aria-live="polite">
+            <div class="empty-state">
+              <i data-lucide="clapperboard" aria-hidden="true"></i>
+              <strong>等待搜索</strong>
+              <span>选择一个关键词，查看相关视频。</span>
+            </div>
+          </div>
+          <div class="pane-foot"><span id="result-meta">仅显示视频笔记</span><span id="result-source">数据来自当前搜索结果</span></div>
+        </div>
+
+        <aside id="detail-pane" class="detail-pane" aria-label="笔记详情">
+          <div class="pane-head detail-head">
+            <button id="mobile-back" class="icon-button mobile-back" type="button" aria-label="返回搜索结果" title="返回搜索结果"><i data-lucide="arrow-left"></i></button>
+            <div class="pane-title"><h2 id="detail-title">笔记详情</h2></div>
+            <a id="source-link" class="icon-button" href="#" target="_blank" rel="noopener noreferrer" title="打开原笔记" aria-label="打开原笔记" hidden><i data-lucide="external-link"></i></a>
+          </div>
+          <div class="tabs" role="tablist" aria-label="详情视图">
+            <button id="tab-note" class="tab is-active" type="button" role="tab" aria-selected="true" aria-controls="panel-note">概览</button>
+            <button id="tab-comments" class="tab" type="button" role="tab" aria-selected="false" aria-controls="panel-comments">评论 <span id="comment-tab-count"></span></button>
+            <button id="tab-insights" class="tab" type="button" role="tab" aria-selected="false" aria-controls="panel-insights">选题</button>
+            <button id="tab-draft" class="tab" type="button" role="tab" aria-selected="false" aria-controls="panel-draft">创作</button>
+          </div>
+          <div class="detail-scroll">
+            <section id="panel-note" class="tab-panel" role="tabpanel" aria-labelledby="tab-note">
+              <div id="note-content" class="detail-empty"><i data-lucide="mouse-pointer-2" aria-hidden="true"></i><span>选择一条视频查看详情</span></div>
+            </section>
+            <section id="panel-comments" class="tab-panel" role="tabpanel" aria-labelledby="tab-comments" hidden>
+              <div id="comments-content" class="detail-empty"><span>选择一条视频查看评论</span></div>
+            </section>
+            <section id="panel-insights" class="tab-panel" role="tabpanel" aria-labelledby="tab-insights" hidden>
+              <div class="insights-view">
+                <div class="insights-head">
+                  <div><h3>选题与受众兴趣</h3><p>综合当前结果前 50 条视频的可见公开评论，所选视频仅作重点对照。</p></div>
+                  <div class="insights-actions">
+                    <button id="stop-analysis" class="button button-quiet" type="button" hidden><i data-lucide="square"></i>停止分析</button>
+                    <button id="analyze-button" class="button button-primary" type="button" disabled><i data-lucide="sparkles"></i>开始分析</button>
+                  </div>
+                </div>
+                <div id="analysis-progress" class="analysis-progress" hidden>
+                  <div class="analysis-progress-head">
+                    <strong id="analysis-progress-stage">读取评论</strong>
+                    <span id="analysis-progress-count">0/50</span>
+                  </div>
+                  <progress id="analysis-progress-bar" max="1" value="0" aria-label="选题分析进度"></progress>
+                  <div class="analysis-progress-foot">
+                    <span id="analysis-progress-steps">已完成步骤 0/1</span>
+                    <span id="analysis-progress-time">已用时 0 秒</span>
+                  </div>
+                </div>
+                <div id="analysis-status" class="analysis-status" role="status" aria-live="polite">先选择一条视频</div>
+                <div id="analysis-content"></div>
+              </div>
+            </section>
+            <section id="panel-draft" class="tab-panel" role="tabpanel" aria-labelledby="tab-draft" hidden>
+              <div id="draft-intro" class="detail-empty"><span>选择一条视频整理选题</span></div>
+              <div id="draft-editor" class="draft-editor" hidden>
+                <div class="editor-head">
+                  <span class="section-label">原创草稿</span>
+                  <button id="regenerate-button" class="icon-button" type="button" title="根据评论重新生成草稿" aria-label="根据评论重新生成草稿"><i data-lucide="refresh-cw"></i></button>
+                </div>
+                <label class="editor-field">标题（最多20字）<input id="draft-title" type="text" maxlength="40"></label>
+                <label class="editor-field">正文<textarea id="draft-content" rows="10"></textarea></label>
+                <div class="editor-actions">
+                  <button id="copy-draft" class="button button-quiet" type="button"><i data-lucide="copy"></i>复制草稿</button>
+                </div>
+                <div class="publish-block">
+                  <div class="section-label">发布视频</div>
+                  <label class="video-picker"><i data-lucide="video" aria-hidden="true"></i><span id="video-name">选择 MP4 / MOV 文件</span><input id="video-file" type="file" accept=".mp4,.mov,video/mp4,video/quicktime"></label>
+                  <button id="publish-button" class="button button-primary button-full" type="button"><i data-lucide="upload"></i>检查并发布</button>
+                </div>
+              </div>
+            </section>
+            <section id="panel-account" class="tab-panel" aria-label="对标账号分析" hidden>
+              <div class="insights-view">
+                <div class="insights-head">
+                  <div><h3 id="account-title">账号分析</h3><p>只比较当前可见视频的公开数据，不推断播放量或涨粉原因。</p></div>
+                  <div class="insights-actions">
+                    <button id="account-stop" class="button button-quiet" type="button" hidden><i data-lucide="square"></i>停止</button>
+                    <button id="account-start" class="button button-primary" type="button" hidden><i data-lucide="play"></i>继续分析</button>
+                  </div>
+                </div>
+                <div id="account-progress" class="analysis-progress" hidden>
+                  <div class="analysis-progress-head"><strong id="account-stage">读取视频</strong><span id="account-count">0/0</span></div>
+                  <progress id="account-bar" max="1" value="0" aria-label="账号分析进度"></progress>
+                  <div class="analysis-progress-foot"><span id="account-steps">已完成步骤 0/1</span><span id="account-time">已用时 0 秒</span></div>
+                </div>
+                <div id="account-status" class="analysis-status" role="status" aria-live="polite">点击“分析账号”开始</div>
+                <div id="account-content"></div>
+              </div>
+            </section>
+          </div>
+        </aside>
+      </section>
+      <section id="ideas-view" class="collection-view" aria-labelledby="ideas-title" hidden>
+        <header class="collection-head">
+          <div>
+            <h1 id="ideas-title">选题库</h1>
+            <p id="ideas-summary">把有评论证据的方向留存下来，再安排拍摄。</p>
+          </div>
+          <div class="collection-actions">
+            <label class="toolbar-field">
+              <span class="sr-only">搜索选题</span>
+              <i data-lucide="search" aria-hidden="true"></i>
+              <input id="ideas-search" type="search" placeholder="搜索选题" autocomplete="off">
+            </label>
+            <select id="ideas-status-filter" aria-label="选题状态">
+              <option value="all">全部状态</option>
+              <option value="planned">待拍</option>
+              <option value="filming">拍摄中</option>
+              <option value="published">已发布</option>
+              <option value="paused">暂不做</option>
+            </select>
+            <button id="add-idea" class="button button-primary" type="button"><i data-lucide="plus"></i><span>新建选题</span></button>
+          </div>
+        </header>
+        <div id="ideas-list" class="ideas-list" aria-live="polite"></div>
+      </section>
+      <section id="reviews-view" class="collection-view" aria-labelledby="reviews-title" hidden>
+        <header class="collection-head">
+          <div>
+            <h1 id="reviews-title">发布复盘</h1>
+            <p>手动记录作品在相同发布时间阶段的数据；缺少的数据不会按 0 计算。</p>
+          </div>
+          <div class="collection-actions">
+            <label class="filter-control">
+              <span>对比阶段</span>
+              <select id="review-stage-filter" aria-label="复盘数据阶段">
+                <option value="24h">发布后 24 小时</option>
+                <option value="7d">发布后 7 天</option>
+                <option value="custom">其他记录</option>
+                <option value="all">全部阶段</option>
+              </select>
+            </label>
+            <button id="add-review" class="button button-primary" type="button"><i data-lucide="plus"></i><span>记录已发布作品</span></button>
+          </div>
+        </header>
+        <div id="review-summary" class="review-summary" aria-live="polite"></div>
+        <div class="review-caveat">阶段内中位数仅对照已记录作品，不代表平台整体数据，也不能单独证明内容表现的原因。</div>
+        <div id="reviews-list" class="reviews-list" aria-live="polite"></div>
+      </section>
+      <section id="word-check-view" class="collection-view word-check-view" aria-labelledby="word-check-title" hidden>
+        <header class="collection-head">
+          <div>
+            <h1 id="word-check-title">文案筛查</h1>
+            <p>按所选平台核对明确词条；平台规则分开匹配，结果只作发布前自查提示。</p>
+          </div>
+          <span id="word-check-source-date" class="source-date"></span>
+        </header>
+        <section class="word-check-filter-row word-check-platforms" aria-labelledby="word-check-platform-title">
+          <div class="word-check-filter-title">
+            <h2 id="word-check-platform-title">平台</h2>
+            <p>可多选</p>
+          </div>
+          <div id="word-check-platform-list" class="word-check-platform-list" role="group" aria-label="筛查平台"></div>
+          <div class="word-check-platform-actions">
+            <button id="word-check-select-all" class="text-action" type="button">全选</button>
+            <button id="word-check-clear-platforms" class="text-action" type="button">清空</button>
+          </div>
+        </section>
+        <section class="word-check-filter-row word-check-groups" aria-labelledby="word-check-group-title">
+          <div class="word-check-filter-title">
+            <h2 id="word-check-group-title">词库范围</h2>
+            <p>默认全选</p>
+          </div>
+          <div id="word-check-group-list" class="word-check-group-list" role="group" aria-label="筛查词库范围"></div>
+          <div class="word-check-platform-actions">
+            <button id="word-check-select-all-groups" class="text-action" type="button">全选</button>
+            <button id="word-check-clear-groups" class="text-action" type="button">清空</button>
+          </div>
+        </section>
+        <div class="word-check-layout">
+          <section class="word-check-editor" aria-labelledby="word-check-input-title">
+            <div class="word-check-section-head">
+              <h2 id="word-check-input-title">待检查文案</h2>
+              <span id="word-check-length" class="word-check-length">0 / 20000</span>
+            </div>
+            <label class="sr-only" for="word-check-text">粘贴或输入文案</label>
+            <textarea id="word-check-text" maxlength="20000" rows="15" placeholder="粘贴视频标题、正文或口播文案"></textarea>
+            <p class="word-check-local-note">文案、平台和词库选择仅保存在本机浏览器，不会上传。点击“开始筛查”后在本机完成匹配。</p>
+            <div class="word-check-actions">
+              <button id="word-check-clear" class="button button-quiet" type="button"><i data-lucide="trash-2" aria-hidden="true"></i><span>清空文案</span></button>
+              <button id="word-check-undo" class="button button-quiet" type="button" hidden><i data-lucide="undo-2" aria-hidden="true"></i><span>撤销替换</span></button>
+              <button id="word-check-run" class="button button-primary" type="button"><i data-lucide="scan-search" aria-hidden="true"></i><span>开始筛查</span></button>
+            </div>
+          </section>
+          <section class="word-check-output" aria-labelledby="word-check-output-title">
+            <div class="word-check-section-head">
+              <h2 id="word-check-output-title">筛查结果</h2>
+              <span id="word-check-status" role="status" aria-live="polite">输入文案并选择平台</span>
+            </div>
+            <div id="word-check-legend" class="word-check-legend" aria-label="风险类别图例"></div>
+            <div id="word-check-preview" class="word-check-preview" aria-label="文案命中词高亮预览" aria-live="polite">
+              <span class="word-check-placeholder">筛查后将在这里显示文案及命中标记</span>
+            </div>
+            <div id="word-check-results" class="word-check-results"></div>
+          </section>
+        </div>
+        <details class="word-check-sources">
+          <summary>规则来源与适用范围</summary>
+          <div id="word-check-source-list" class="word-check-source-list"></div>
+          <p>规则源核对日期为 <time id="word-check-checked-date"></time>。法规和平台规则可能更新；词条命中不等于违规判定，也不保证发布通过。广告法条目仅提示商业广告场景，平台审核仍以发布时官方规则为准。</p>
+        </details>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="login-dialog" class="modal">
+    <div class="modal-head"><h2>连接小红书</h2><button class="icon-button dialog-close" type="button" aria-label="关闭" title="关闭"><i data-lucide="x"></i></button></div>
+    <div id="login-modal-body" class="login-body"><span class="spinner"></span><span>正在获取二维码</span></div>
+    <div class="modal-foot">
+      <button id="check-login-status" class="button button-quiet" type="button"><i data-lucide="check"></i>扫码后检查状态</button>
+      <button id="refresh-qr" class="button button-quiet" type="button"><i data-lucide="refresh-cw"></i>刷新二维码</button>
+    </div>
+  </dialog>
+
+  <dialog id="model-dialog" class="modal model-modal">
+    <div class="modal-head"><h2>本地分析模型</h2><button class="icon-button dialog-close" type="button" aria-label="关闭" title="关闭"><i data-lucide="x"></i></button></div>
+    <div class="model-body">
+      <p id="model-status" role="status">正在检查本地模型…</p>
+      <a id="ollama-link" href="https://ollama.com/download/windows" target="_blank" rel="noopener noreferrer" hidden>安装 Ollama <i data-lucide="external-link" aria-hidden="true"></i></a>
+      <label class="editor-field">当前模型
+        <select id="model-select" disabled></select>
+      </label>
+      <p class="model-note">以下模型均可免费在本机运行。6 GB / 12 GB 是 RTX 3060 的参考显存档位，不保证长评论分析全程只用显卡；下载大小也不等于运行显存。</p>
+      <div id="model-downloads" class="model-downloads"></div>
+      <div id="model-progress" class="model-progress" role="status" aria-live="polite" hidden></div>
+    </div>
+    <div class="modal-foot"><button class="button button-quiet dialog-close" type="button">完成</button></div>
+  </dialog>
+
+  <dialog id="publish-dialog" class="modal">
+    <div class="modal-head"><h2>确认发布</h2><button class="icon-button dialog-close" type="button" aria-label="关闭" title="关闭"><i data-lucide="x"></i></button></div>
+    <div class="publish-confirm">
+      <div class="confirm-row"><span>视频</span><strong id="confirm-video"></strong></div>
+      <div class="confirm-row"><span>标题</span><strong id="confirm-title"></strong></div>
+      <p>确认后将以当前登录账号公开发布。</p>
+    </div>
+    <div class="modal-foot"><button class="button button-quiet dialog-close" type="button">取消</button><button id="confirm-publish" class="button button-primary" type="button"><i data-lucide="upload"></i>确认发布</button></div>
+  </dialog>
+
+  <dialog id="idea-dialog" class="modal collection-modal">
+    <form id="idea-form">
+      <div class="modal-head"><h2 id="idea-dialog-title">新建选题</h2><button class="icon-button dialog-close" type="button" aria-label="关闭" title="关闭"><i data-lucide="x"></i></button></div>
+      <div class="collection-form">
+        <label class="editor-field">选题标题<input id="idea-title" maxlength="120" required></label>
+        <label class="editor-field">开场钩子<input id="idea-hook" maxlength="240"></label>
+        <label class="editor-field">拍摄提纲<textarea id="idea-outline" rows="5" placeholder="每行一个步骤"></textarea></label>
+        <label class="editor-field">选题依据<textarea id="idea-reason" rows="3"></textarea></label>
+        <label class="editor-field">来源关键词<input id="idea-keyword" maxlength="80"></label>
+      </div>
+      <div class="modal-foot"><button class="button button-quiet dialog-close" type="button">取消</button><button class="button button-primary" type="submit"><i data-lucide="check"></i>保存选题</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="review-dialog" class="modal collection-modal">
+    <form id="review-form">
+      <div class="modal-head"><h2 id="review-dialog-title">记录已发布作品</h2><button class="icon-button dialog-close" type="button" aria-label="关闭" title="关闭"><i data-lucide="x"></i></button></div>
+      <div class="collection-form">
+        <label class="editor-field">作品标题<input id="review-title" maxlength="120" required></label>
+        <label class="editor-field">发布时间<input id="review-published-at" type="datetime-local" required></label>
+        <label class="editor-field">关联选题<select id="review-topic"><option value="">不关联选题</option></select></label>
+        <label class="editor-field">作品链接（可选）<input id="review-link" type="url" placeholder="https://www.xiaohongshu.com/"></label>
+        <p class="form-note">作品信息仅保存在本机浏览器。发布数据可稍后补录。</p>
+      </div>
+      <div class="modal-foot"><button class="button button-quiet dialog-close" type="button">取消</button><button class="button button-primary" type="submit"><i data-lucide="check"></i>保存作品</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="snapshot-dialog" class="modal collection-modal">
+    <form id="snapshot-form">
+      <div class="modal-head"><h2 id="snapshot-dialog-title">记录数据</h2><button class="icon-button dialog-close" type="button" aria-label="关闭" title="关闭"><i data-lucide="x"></i></button></div>
+      <div class="collection-form">
+        <label class="editor-field">记录阶段<select id="snapshot-stage"><option value="24h">发布后 24 小时</option><option value="7d">发布后 7 天</option><option value="custom">其他记录</option></select></label>
+        <label class="editor-field">数据记录时间<input id="snapshot-recorded-at" type="datetime-local" required></label>
+        <div class="metric-fields">
+          <label class="editor-field">播放量<input id="snapshot-views" type="number" min="0" step="1" inputmode="numeric"></label>
+          <label class="editor-field">点赞<input id="snapshot-likes" type="number" min="0" step="1" inputmode="numeric"></label>
+          <label class="editor-field">收藏<input id="snapshot-saves" type="number" min="0" step="1" inputmode="numeric"></label>
+          <label class="editor-field">评论<input id="snapshot-comments" type="number" min="0" step="1" inputmode="numeric"></label>
+          <label class="editor-field">新增粉丝<input id="snapshot-follows" type="number" min="0" step="1" inputmode="numeric"></label>
+        </div>
+        <p class="form-note">从平台页面手动抄录；留空表示未记录，只有明确为零时才填 0。</p>
+      </div>
+      <div class="modal-foot"><button class="button button-quiet dialog-close" type="button">取消</button><button class="button button-primary" type="submit"><i data-lucide="check"></i>保存数据</button></div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>
